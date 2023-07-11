@@ -1,0 +1,42 @@
+# May need to install conda first
+# Install required packages with: pip install --user -r python_requirements.txt
+# pip install --user "ray[default]"
+# PIL install as Pillow
+# Install scikit as scikit-image
+# Install cv2 as opencv-python
+'''
+wget https://downloads.imagej.net/fiji/latest/fiji-linux64.zip
+unzip fiji-linux64.zip
+
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+export PATH=~/miniconda/bin:$PATH
+
+source ~/miniconda3/bin/activate
+export PATH="/miniconda3/bin":$PATH
+
+conda create -n dynamics_pipeline python=3.8 anaconda
+conda activate dynamics_pipeline
+
+conda install -c conda-forge opencv
+conda install -c conda-forge libglib
+
+# Install Python packages
+python -m pip install --user -r python_requirements.txt
+
+# Install libtiff
+mkdir libtiff
+cd libtiff
+wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz
+tar -xvf tiff-4.3.0.tar.gz
+mkdir install
+cd tiff-4.3.0
+mkdir compile
+cd compile
+../configure --prefix=/u/deliz/libtiff/install
+make
+make install
+export PKG_CONFIG_PATH=/u/deliz/libtiff/install/lib/pkgconfig/
+
+'''
