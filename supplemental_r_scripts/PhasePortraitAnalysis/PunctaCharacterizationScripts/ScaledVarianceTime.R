@@ -1,0 +1,104 @@
+SummaryFlow <-
+  AnalysisStatTable %>% 
+  filter(
+    FRAMES_SINCE_LANDING_CAT %in% c(50, 100, 200),
+    !is.infinite(ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY),
+    !is.infinite(ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY),
+    
+    # !is.infinite(ADJUSTED_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY),
+    # !is.infinite(ADJUSTED_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY)
+  ) %>% 
+  ungroup() %>%
+  mutate(
+    IMAGENUMBER = group_indices(., COHORT, LIGAND_DENSITY_CAT, FPS, REFERENCE_PROTEIN, QUERY_PROTEIN, IMAGE),
+    PLOT_FACETS = paste(COHORT, LIGAND_DENSITY_CAT, FPS, REFERENCE_PROTEIN, QUERY_PROTEIN),
+    COHORT = factor(COHORT, levels = paste(USE_REFERENCE_PROTEIN, PROTEIN_ORDER))
+  ) %>%
+  group_by(
+    PLOT_FACETS, COHORT, LIGAND_DENSITY_CAT, FPS, REFERENCE_PROTEIN, QUERY_PROTEIN
+  ) %>% 
+  mutate(
+    FPS = round(FPS, 2),
+    IMAGENUMBER = IMAGENUMBER - min(IMAGENUMBER) + 1
+  ) %>% 
+  group_by(
+    PLOT_FACETS, COHORT, LIGAND_DENSITY_CAT, FPS, REFERENCE_PROTEIN, QUERY_PROTEIN, FRAMES_SINCE_LANDING_CAT, IMAGENUMBER,
+    FRAMES_ADJUSTED
+  ) %>% 
+  summarize(
+    N = n(),
+    MAD_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY = mad(ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY),
+    MAD_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY = mad(ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY),
+    ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY = median(ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY),
+    ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY = median(ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY)
+  ) %>% 
+  group_by(
+    PLOT_FACETS,
+    COHORT, LIGAND_DENSITY_CAT, FPS, REFERENCE_PROTEIN, QUERY_PROTEIN, FRAMES_SINCE_LANDING_CAT, IMAGENUMBER
+  ) %>% 
+  mutate(
+    # ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY = roll_median(ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY, n = 5, fill = NA, align = "center"),
+    # ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY = roll_median(ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY, n = 5, fill = NA, align = "center"),
+    N_TEST = ifelse(N >= quantile(N, 0.50), T, F)
+  ) %>% 
+  filter(
+    # N_TEST == T
+  ) %>% 
+  group_by(
+    COHORT, LIGAND_DENSITY_CAT, FPS, REFERENCE_PROTEIN, QUERY_PROTEIN, IMAGENUMBER
+  ) %>% 
+  mutate(
+    SCALED_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY = ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY/max(ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY),
+    SCALED_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY = ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY/max(ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY),
+    SCALED_MAD_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY = MAD_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY/max(MAD_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY),
+    SCALED_MAD_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY = MAD_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY/max(MAD_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY)
+  )
+
+
+ggplot(
+) +
+  geom_path(
+    data = SummaryFlow,
+    aes(
+      x = FRAMES_ADJUSTED,
+      y = MAD_ADJUSTED_DELTA_REFERENCE_TOTAL_INTENSITY,
+      color = REFERENCE_PROTEIN
+    )
+  ) +
+  geom_path(
+    data = SummaryFlow,
+    aes(
+      x = FRAMES_ADJUSTED,
+      y = MAD_ADJUSTED_DELTA_QUERY_TOTAL_INTENSITY,
+      color = QUERY_PROTEIN
+    )
+  ) +
+  scale_color_manual(
+    values = c("magenta",  "magenta", "green", "magenta")
+  ) +
+  scale_fill_manual(
+    values = c("magenta",  "magenta", "green", "magenta")
+  ) +
+  labs(
+    x = "Time (Frames)",
+    y = "MAD Change/Intensity",
+    color = "Protein",
+    fill = "Protein"
+  ) +
+  facet_grid(
+    QUERY_PROTEIN~FRAMES_SINCE_LANDING_CAT,
+    scales = "free"
+  ) +
+  dark_theme_classic(
+    base_size = 20
+  ) 
+
+
+ggsave(
+  # Save vector image
+  "ScaledVarianceTime.pdf",
+  # height = 4.76*1.25,
+  # width = 11.5*1.25
+  height = 4.76,
+  width = 11.5
+)

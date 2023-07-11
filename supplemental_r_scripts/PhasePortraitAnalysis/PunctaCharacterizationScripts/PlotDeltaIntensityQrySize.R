@@ -1,0 +1,83 @@
+IntensityByTime <-
+  StatTable %>% 
+  filter(
+    MAX_REFERENCE_TOTAL_INTENSITY_CAT == "≥4.5x MyD88",
+    FRAMES_SINCE_LANDING_CAT <= 100,
+    ROUNDED_REFERENCE_TOTAL_INTENSITY >= 1
+  ) %>% 
+  mutate(
+    TIME_ADJUSTED = round(TIME_ADJUSTED),
+  ) %>% 
+  group_by(
+    IMAGE,
+    REFERENCE_PROTEIN,
+    QUERY_PROTEIN,
+    ROUNDED_REFERENCE_TOTAL_INTENSITY,
+    ROUNDED_QUERY_TOTAL_INTENSITY
+  ) %>% 
+  summarize(
+    DELTA_REFERENCE_TOTAL_INTENSITY = median(DELTA_REFERENCE_TOTAL_INTENSITY),
+    DELTA_QUERY_TOTAL_INTENSITY = median(DELTA_QUERY_TOTAL_INTENSITY),
+    N = n()
+  ) %>% 
+  filter(
+    # TIME_ADJUSTED <= 300,
+    N >= 5
+  ) %>% 
+  group_by(
+    IMAGE,
+    REFERENCE_PROTEIN,
+    QUERY_PROTEIN,
+    ROUNDED_QUERY_TOTAL_INTENSITY
+  ) %>% 
+  mutate(
+    N = n()
+  ) %>% 
+  filter(
+    N >= 5
+  )
+
+ggplot(
+  IntensityByTime %>% filter(ROUNDED_QUERY_TOTAL_INTENSITY <= 6)
+  
+) +
+  geom_hline(
+    yintercept = 0
+  ) +
+  geom_path(
+    aes(
+      x = ROUNDED_REFERENCE_TOTAL_INTENSITY,
+      y = DELTA_REFERENCE_TOTAL_INTENSITY,
+      color = REFERENCE_PROTEIN
+    )
+  ) +
+  geom_path(
+    aes(
+      x = ROUNDED_REFERENCE_TOTAL_INTENSITY,
+      y = DELTA_QUERY_TOTAL_INTENSITY,
+      color = QUERY_PROTEIN
+    )
+  ) +
+  scale_color_manual(
+    values = c("magenta", "green", "pink")
+  ) +
+  labs(
+    x = "MyD88 Size",
+    y = "Size Change",
+    color = "Protein"
+  ) +
+  dark_theme_classic(
+    # base_size = 20
+  ) +
+  facet_grid(
+    QUERY_PROTEIN~ROUNDED_QUERY_TOTAL_INTENSITY
+  ) +
+  theme(
+    legend.position = "bottom"
+  )
+
+ggsave(
+  file.path(OUTPUT_DIRECTORY, "DeltaIntensityQrySize.pdf"),
+  height = 4.76,
+  width = 11.5
+)
